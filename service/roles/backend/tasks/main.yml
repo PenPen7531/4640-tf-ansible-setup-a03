@@ -1,0 +1,120 @@
+---
+
+#
+- name: Include Var files
+  include_vars: "../../../group_vars/webservers.yml"
+
+  
+- name: Install pip package
+  ansible.builtin.package:
+    update_cache: true
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - git
+    - libmysqlclient-dev
+    - pkg-config
+    - python3
+    - qtbase5-dev
+    - python3-pip
+    - python3-pymysql
+  become: true
+
+
+
+- name: Removes all anonymous user accounts
+  community.mysql.mysql_user:
+    # login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_host: "{{ database_endpoint }}"
+    check_implicit_admin: true
+    login_user: root
+    login_password: example1234
+    name: ''
+    host_all: true
+    state: absent
+  become: true
+
+
+    
+
+- name: Delete database with name 'test'
+  community.mysql.mysql_db:
+    check_implicit_admin: true
+    # login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_host: "{{ database_endpoint }}"
+    login_user: root
+    login_password: example1234
+    name: test
+    state: absent
+  become: true
+
+- name: Create new databases with name backend 
+  community.mysql.mysql_db:
+    check_implicit_admin: true
+    login_host: "{{ database_endpoint }}"
+    login_user: root
+    login_password: example1234
+    name:
+      - backend
+    state: present
+  become: true
+
+
+  
+- name: Create DB Table and Insert Data
+  community.mysql.mysql_query:
+    login_db: backend
+    login_user: root
+    login_password: example1234
+    query: 
+      - CREATE TABLE IF NOT EXISTS item (name varchar(30) NOT NULL,bcit_id varchar(10) NOT NULL, PRIMARY KEY (bcit_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+      - INSERT IGNORE INTO item (name, bcit_id) VALUES ('Jeff', 'A01228943');
+    login_host: "{{ database_endpoint }}"
+
+
+- name: Add the user a02
+  user:
+    name: a02
+  become: true
+- name: Git pull
+  ansible.builtin.git:
+    repo: 'https://github.com/timoguic/acit4640-py-mysql/'
+    dest: /home/a02/webapp
+    force: true
+
+  become: true 
+
+- name: Pip install requirements.txt
+  ansible.builtin.pip:
+    requirements: /home/a02/webapp/backend/requirements.txt
+    extra_args: --break-system-packages
+  become: true
+
+
+- name: Transfer backend.conf 
+  template:
+    src: backend.conf.j2
+    dest: /home/a02/webapp/backend/backend.conf
+    owner: a02
+    group: a02
+    mode: '777'
+
+  become: true
+
+- name: Transfer backend.conf 
+  template:
+    src: backend.service.j2
+    dest: /etc/systemd/system/backend.service
+    owner: root
+    group: root
+    mode: '777'
+
+  become: true
+
+- name: Start backend service
+  ansible.builtin.systemd:
+    name: backend.service
+    daemon-reload: true
+    state: restarted
+    enabled: true
+  become: true

@@ -1,0 +1,56 @@
+---
+- name: Include Var files
+  include_vars: "../../../group_vars/webservers.yml"
+
+- name: Install nginx
+  ansible.builtin.package:
+    update_cache: true
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - nginx
+  become: true
+
+- name: Add the user a02
+  user:
+    name: a02
+  become: true
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: /home/a02/web_root/
+    state: directory
+    mode: '777'
+  become: true
+
+- name: Permissions for a02 dir
+  file:
+    path: /home/a02
+    owner: a02
+    group: a02
+    mode: '777'
+  become: true
+- name: Transfer index.html 
+  template:
+    src: index.html.j2
+    dest: /home/a02/web_root/index.html
+    owner: root
+    group: root
+    mode: '777'
+  become: true
+
+- name: Transfer index.html 
+  template:
+    src: default.j2
+    dest: /etc/nginx/sites-enabled/default
+    owner: root
+    group: root
+    mode: '777'
+  become: true
+
+- name: Restart and Enable Nginx
+  ansible.builtin.systemd:
+    name: nginx.service
+    daemon-reload: true
+    state: restarted
+    enabled: true
+  become: true

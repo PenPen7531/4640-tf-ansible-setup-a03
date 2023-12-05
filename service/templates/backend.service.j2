@@ -1,0 +1,14 @@
+[Unit]
+Description='Assignment 01 Project ACIT-4640'
+After=network.target
+
+
+
+[Service]
+Type=simple
+WorkingDirectory=/home/a02/webapp/backend
+User=a02
+ExecStart=gunicorn wsgi:app -b 0.0.0.0:5000
+
+[Install]
+WantedBy=multi-user.target

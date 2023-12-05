@@ -1,0 +1,22 @@
+---
+
+# Install general packages
+- name: Install General Tools on all webservers
+  hosts: all
+  roles:
+    - common
+
+
+# Configure the backend instance
+- name: Configure backend
+  hosts: backend
+  
+  roles:
+    - backend
+
+  
+# Configure the frontend instance
+- name: Configure web
+  hosts: web
+  roles: 
+    - web
